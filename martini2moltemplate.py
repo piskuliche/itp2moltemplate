@@ -24,8 +24,24 @@ class nbparam:
     def convert_to_real(self):
         self.sig = self.sig*10.0
 
-
-
+class molecule:
+    def __init__(self,line):
+        line = line.strip().split()
+        self.name = str(line[0])
+        self.nrexcl = int(line[1])
+        self.atoms={"i":[],"type":[],"resnr":[],"residue":[],"atom":[],"cgnr":[],"Q":[]}
+    def add_atom(self,line):
+        line = line.strip().split()
+        c=0
+        intkey=["i","resnr","cgnr"]
+        fltkey=["Q"]
+        strkey=["type","residue","atom"]
+        for key in self.atoms:
+            if key in intkey: self.atoms[key].append(int(line[c]))
+            if key in fltkey: self.atoms[key].append(float(line[c]))
+            if key in strkey: self.atoms[key].append(str(line[c]))
+            c = c+1
+        
 
 def is_not_blank(s):
     return bool(s and not s.isspace())
@@ -87,14 +103,36 @@ def read_mol_itp(filename):
         lines = f.readlines()
         flag_atoms, flag_bonds, flag_angles, flag_mol = 0,0,0,0
         definitions = {}
+        molecules = {}
+        currentmol=None
         for line in lines:
             # This stores the definitions in a dictionary for later
             if "#define" in line:
                 l = line.split(";")[0]
                 if is_not_blank(l):
-                    definitions[l[1]] = line
+                    definitions[str(l.strip().split()[1])] = l
+        for line in lines:
+            if flag_mol == 1 and "[" not in line:
+                l = line.split(";")[0]
+                if is_not_blank(l):
+                    newmol = molecule(l)
+                    molecules[newmol.name] = newmol
+                    currentmol = newmol.name
+            if flag_atoms == 1 and "[" not in line:
+                l = line.split(";")[0]
+                if is_not_blank(l):
+                    molecules[currentmol].add_atom(l)
+            if "[ moleculetype ]" in line:
+                flag_atoms, flag_bonds, flag_angles,flag_mol = 0,0,0,1
+            if "[ atoms ]" in line:
+                 flag_atoms, flag_bonds, flag_angles,flag_mol = 1,0,0,0
+            if "[ bonds ]" in line:
+                 flag_atoms, flag_bonds, flag_angles,flag_mol = 0,1,0,0
+            if "[ angles ]" in line:
+                 flag_atoms, flag_bonds, flag_angles,flag_mol = 0,0,1,0
+        print("There are %d molecules" % len(molecules))
 
                 
 
 read_main_itp("Dry-Martini/dry_martini_v2.1.itp")
-read_main_itp("martini_v3.0.0.itp")
+read_mol_itp("Dry-Martini/dry_martini_v2.1_cholesterol.itp")
