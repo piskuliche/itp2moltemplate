@@ -1,0 +1,26 @@
+import "drymartini.lt"
+
+DHPE inherits drymartini {
+write("Data Atoms") {
+$atom:NH3 $mol:. @atom:Qd  1.00000000  0.00000000  0.00000000  0.00000000
+$atom:PO4 $mol:. @atom:Qa -1.00000000  0.00000000  0.00000000  0.00000000
+$atom:GL1 $mol:. @atom:Na  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:GL2 $mol:. @atom:Na  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:C1A $mol:. @atom:C1  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:C2A $mol:. @atom:C1  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:C1B $mol:. @atom:C1  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:C2B $mol:. @atom:C1  0.00000000  0.00000000  0.00000000  0.00000000
+}
+
+write("Data Bond List") {
+$bond:b0 $atom:NH3 $atom:PO4
+$bond:b1 $atom:PO4 $atom:GL1
+$bond:b2 $atom:GL1 $atom:GL2
+$bond:b3 $atom:GL1 $atom:C1A
+$bond:b4 $atom:C1A $atom:C2A
+$bond:b5 $atom:GL2 $atom:C1B
+$bond:b6 $atom:C1B $atom:C2B
+}
+
+DHPE.scale(10)
+}

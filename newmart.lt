@@ -1,0 +1,65 @@
+newmart {
+write_once("Data Masses") {
+}
+
+
+write_once("In Settings") {
+}
+
+
+write_once("In Settings") {
+bond_coeff @bond:P5-Qa harmonic 1.49378585 3.70000000
+bond_coeff @bond:Qa-Na harmonic 1.49378585 3.70000000
+bond_coeff @bond:Na-Na harmonic 1.49378585 3.70000000
+bond_coeff @bond:Na-C1 harmonic 1.49378585 4.80000000
+bond_coeff @bond:C1-C3 harmonic 1.49378585 4.80000000
+bond_coeff @bond:C3-C1 harmonic 1.49378585 4.80000000
+bond_coeff @bond:C1-C1 harmonic 1.49378585 4.80000000
+bond_coeff @bond:Q0-Qa harmonic 1.49378585 4.50000000
+}
+
+write_once("Data Bonds By Type") {
+@bond:P5-Qa @atom:P5 @atom:Qa
+@bond:Qa-Na @atom:Qa @atom:Na
+@bond:Na-Na @atom:Na @atom:Na
+@bond:Na-C1 @atom:Na @atom:C1
+@bond:C1-C3 @atom:C1 @atom:C3
+@bond:C3-C1 @atom:C3 @atom:C1
+@bond:C1-C1 @atom:C1 @atom:C1
+@bond:Q0-Qa @atom:Q0 @atom:Qa
+}
+
+
+write_once("In Settings") {
+angle_coeff @angle:Qa-Na-Na cosine/squared 2.98757170 120.00000000
+angle_coeff @angle:Qa-Na-C1 cosine/squared 2.98757170 180.00000000
+angle_coeff @angle:Na-C1-C3 cosine/squared 4.18260038 180.00000000
+angle_coeff @angle:C1-C3-C1 cosine/squared 5.37762906 120.00000000
+angle_coeff @angle:C3-C1-C1 cosine/squared 4.18260038 180.00000000
+angle_coeff @angle:Na-C1-C1 cosine/squared 4.18260038 180.00000000
+angle_coeff @angle:C1-C1-C1 cosine/squared 4.18260038 180.00000000
+}
+
+write_once("Data Angles By Type") {
+@angle:Qa-Na-Na @atom:Qa @atom:Na @atom:Na
+@angle:Qa-Na-C1 @atom:Qa @atom:Na @atom:C1
+@angle:Na-C1-C3 @atom:Na @atom:C1 @atom:C3
+@angle:C1-C3-C1 @atom:C1 @atom:C3 @atom:C1
+@angle:C3-C1-C1 @atom:C3 @atom:C1 @atom:C1
+@angle:Na-C1-C1 @atom:Na @atom:C1 @atom:C1
+@angle:C1-C1-C1 @atom:C1 @atom:C1 @atom:C1
+}
+
+
+write_once("In Init") {
+units real
+atom_style full
+bond_style hybrid harmonic
+angle_style hybrid cosine/squared
+pair_style hybrid lj/gromacs/coul/gromacs 9 12 0.000001 12
+special_bonds lj/coul 0.0 1.0 1.0
+dielectric 15.0
+}
+
+
+}

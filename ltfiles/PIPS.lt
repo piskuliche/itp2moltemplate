@@ -1,0 +1,34 @@
+import "drymartini.lt"
+
+PIPS inherits drymartini {
+write("Data Atoms") {
+$atom:CNO $mol:. @atom:P6  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:PO4 $mol:. @atom:Q5 -1.00000000  0.00000000  0.00000000  0.00000000
+$atom:GL1 $mol:. @atom:SN4a  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:GL2 $mol:. @atom:N4a  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:C1A $mol:. @atom:C1  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:D2A $mol:. @atom:C4h  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:D3A $mol:. @atom:C4h  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:C4A $mol:. @atom:C1  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:C1B $mol:. @atom:C1  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:C2B $mol:. @atom:C1  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:C3B $mol:. @atom:C1  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:C4B $mol:. @atom:C1  0.00000000  0.00000000  0.00000000  0.00000000
+}
+
+write("Data Bond List") {
+$bond:b0 $atom:CNO $atom:PO4
+$bond:b1 $atom:PO4 $atom:GL1
+$bond:b2 $atom:GL1 $atom:GL2
+$bond:b3 $atom:GL1 $atom:C1A
+$bond:b4 $atom:C1A $atom:D2A
+$bond:b5 $atom:D2A $atom:D3A
+$bond:b6 $atom:D3A $atom:C4A
+$bond:b7 $atom:GL2 $atom:C1B
+$bond:b8 $atom:C1B $atom:C2B
+$bond:b9 $atom:C2B $atom:C3B
+$bond:b10 $atom:C3B $atom:C4B
+}
+
+PIPS.scale(10)
+}

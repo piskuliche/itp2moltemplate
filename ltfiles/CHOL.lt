@@ -1,0 +1,28 @@
+import "drymartini.lt"
+
+CHOL inherits drymartini {
+write("Data Atoms") {
+$atom:ROH $mol:. @atom:SP1c  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:R1 $mol:. @atom:SC1  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:R2 $mol:. @atom:SC3  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:R3 $mol:. @atom:SC1  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:R4 $mol:. @atom:SC1  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:R5 $mol:. @atom:SC1  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:C1 $mol:. @atom:SC1  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:C2 $mol:. @atom:C1  0.00000000  0.00000000  0.00000000  0.00000000
+}
+
+write("Data Bond List") {
+$bond:b0 $atom:C1 $atom:C2
+$bond:b1 $atom:ROH $atom:R2
+$bond:b2 $atom:ROH $atom:R3
+$bond:b3 $atom:R2 $atom:R3
+$bond:b4 $atom:C1 $atom:R2
+$bond:b5 $atom:C1 $atom:R3
+$bond:b6 $atom:R4 $atom:R3
+$bond:b7 $atom:R1 $atom:R2
+$bond:b8 $atom:R5 $atom:R3
+}
+
+CHOL.scale(10)
+}

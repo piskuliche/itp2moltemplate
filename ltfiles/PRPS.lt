@@ -1,0 +1,38 @@
+import "drymartini.lt"
+
+PRPS inherits drymartini {
+write("Data Atoms") {
+$atom:CNO $mol:. @atom:P6  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:PO4 $mol:. @atom:Q5 -1.00000000  0.00000000  0.00000000  0.00000000
+$atom:GL1 $mol:. @atom:SN4a  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:GL2 $mol:. @atom:N4a  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:D1A $mol:. @atom:C4h  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:D2A $mol:. @atom:C4h  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:D3A $mol:. @atom:C4h  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:D4A $mol:. @atom:C4h  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:D5A $mol:. @atom:C4h  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:D6A $mol:. @atom:C4h  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:C1B $mol:. @atom:C1  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:C2B $mol:. @atom:C1  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:C3B $mol:. @atom:C1  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:C4B $mol:. @atom:C1  0.00000000  0.00000000  0.00000000  0.00000000
+}
+
+write("Data Bond List") {
+$bond:b0 $atom:CNO $atom:PO4
+$bond:b1 $atom:PO4 $atom:GL1
+$bond:b2 $atom:GL1 $atom:GL2
+$bond:b3 $atom:GL1 $atom:D1A
+$bond:b4 $atom:D1A $atom:D2A
+$bond:b5 $atom:D2A $atom:D3A
+$bond:b6 $atom:D3A $atom:D4A
+$bond:b7 $atom:D4A $atom:D5A
+$bond:b8 $atom:D5A $atom:D6A
+$bond:b9 $atom:GL2 $atom:C1B
+$bond:b10 $atom:C1B $atom:C2B
+$bond:b11 $atom:C2B $atom:C3B
+$bond:b12 $atom:C3B $atom:C4B
+}
+
+PRPS.scale(10)
+}

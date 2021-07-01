@@ -1,4 +1,6 @@
 import numpy as np
+import os
+import sys
 
 class atom:
     def __init__(self,line):
@@ -23,6 +25,33 @@ class nbparam:
         self.funcs.append(func)
     def convert_to_real(self):
         self.sig = self.sig*10.0
+        self.eps = self.eps/4.184
+
+class bondparam:
+    def __init__(self,line):
+        line = line.strip().split()
+        self.a1 = str(line[0])
+        self.a2 = str(line[1])
+        self.R  = float(line[2])
+        self.K  = float(line[3])
+        self.name="%s-%s"%(self.a1,self.a2)
+    def convert_to_real(self):
+        self.K = self.K/418.4
+        self.K = self.K/2 # for lammps it doesn't include 1/2 factor
+        self.R = self.R*10
+
+class anglparam:
+    def __init__(self,line):
+        line=line.strip().split()
+        self.a1 = str(line[0])
+        self.a2 = str(line[1])
+        self.a3 = str(line[2])
+        self.name = "%s-%s-%s"%(self.a1,self.a2,self.a3)
+        self.K  = float(line[4])
+        self.THETA = float(line[3])
+    def convert_to_real(self):
+        self.K = self.K/4.184
+        self.K = self.K/2
 
 class molecule:
     def __init__(self,line):
@@ -30,6 +59,7 @@ class molecule:
         self.name = str(line[0])
         self.nrexcl = int(line[1])
         self.atoms={"i":[],"type":[],"resnr":[],"residue":[],"atom":[],"cgnr":[],"Q":[]}
+        self.bonds=[]
     def add_atom(self,line):
         line = line.strip().split()
         c=0
@@ -41,7 +71,30 @@ class molecule:
             if key in fltkey: self.atoms[key].append(float(line[c]))
             if key in strkey: self.atoms[key].append(str(line[c]))
             c = c+1
-        
+    def add_bond(self,line):
+        line = line.strip().split()
+        a1=int(line[0])-1
+        a2=int(line[1])-1
+        self.bonds.append([self.atoms["atom"][a1],self.atoms["atom"][a2]])
+        return
+    def write(self,ffname):
+        with open("ltfiles/"+self.name+".lt",'w') as g:
+            g.write('import "%s.lt"\n\n'%ffname)
+            g.write('%s inherits %s {\n' % (self.name,ffname))
+            g.write('write("Data Atoms") {\n')
+            for i in range(len(self.atoms["i"])):
+                g.write("$atom:%s $mol:. @atom:%s % 10.8f % 10.8f % 10.8f % 10.8f\n" % (self.atoms["atom"][i],self.atoms["type"][i],self.atoms["Q"][i],0,0,0))
+            g.write("}\n\n")
+            g.write('write("Data Bond List") {\n')
+            c=0
+            for bond in self.bonds:
+                g.write("$bond:b%d $atom:%s $atom:%s\n" % (c,bond[0],bond[1]))
+                c=c+1
+            g.write("}\n\n")
+            g.write("%s.scale(10)\n}\n"%self.name)
+        return
+
+
 
 def is_not_blank(s):
     return bool(s and not s.isspace())
@@ -50,7 +103,6 @@ def read_main_itp(filename):
     with open(filename,'r') as f:
         lines=f.readlines()
         flag_atoms, flag_nb = 0,0
-        atoms,nbparams = {},{}
         newtype=0
         # Looks for Definitions
         for line in lines:
@@ -86,25 +138,25 @@ def read_main_itp(filename):
                         if found == 0:
                             nbparams[str(newtype)]=nbparam("#define %s %10.5f %10.5f" % (str(newtype),sig,eps))
                             newtype += 1
-            if "[ atomtypes ]" in line:
+            if "[atomtypes]" in line.replace(" ", ""):
                 flag_atoms  =   1
                 flag_nb     =   0
-            if "[ nonbond_params ]" in line:
+            if "[nonbond_params]" in line.replace(" ", ""):
                 flag_nb     =   1
                 flag_atoms  =   0
 
     print("Read primary ITP file!")
     print("There are %d types of atoms" % len(atoms))
     print("There are %d types of pairwise interactions" % len(nbparams))
-    return
+    return atoms, nbparams
 
 def read_mol_itp(filename):
     with open(filename,'r') as f:
         lines = f.readlines()
         flag_atoms, flag_bonds, flag_angles, flag_mol = 0,0,0,0
         definitions = {}
-        molecules = {}
         currentmol=None
+        newmol=None
         for line in lines:
             # This stores the definitions in a dictionary for later
             if "#define" in line:
@@ -112,27 +164,176 @@ def read_mol_itp(filename):
                 if is_not_blank(l):
                     definitions[str(l.strip().split()[1])] = l
         for line in lines:
+            # Starts reading molecule
             if flag_mol == 1 and "[" not in line:
                 l = line.split(";")[0]
                 if is_not_blank(l):
                     newmol = molecule(l)
-                    molecules[newmol.name] = newmol
+                    #molecules[newmol.name] = newmol
                     currentmol = newmol.name
+            # Starts reading atom section
             if flag_atoms == 1 and "[" not in line:
                 l = line.split(";")[0]
                 if is_not_blank(l):
-                    molecules[currentmol].add_atom(l)
-            if "[ moleculetype ]" in line:
+                    newmol.add_atom(l)
+            # Starts reading bonds section            
+            if flag_bonds == 1 and "[" not in line:
+                l = line.split(";")[0]
+                l = l.split("#")[0]
+                if is_not_blank(l):
+                    newmol.add_bond(l)
+                    l=line.strip().split()
+                    r,k=0,0
+                    atom1, atom2 = newmol.atoms["type"][int(l[0])-1],newmol.atoms["type"][int(l[1])-1]
+                    if l[3] in definitions:
+                        r,k=float(definitions[l[3]].strip().split()[2]),float(definitions[l[3]].strip().split()[3])
+                    else:
+                        r,k=float(l[3]),float(l[4])
+                    name = "%s-%s"%(atom1,atom2)
+                    if name in bonds:
+                        if bonds[name].R != r:
+                            print("Trouble with %s redefining bond length of %s from %10.8f to %10.8f"%(currentmol,name,bonds[name].R,r))
+                            if currentmol not in troublemolecs:
+                                troublemolecs.append(currentmol)
+                        if bonds[name].K != k:
+                            print("Trouble with %s redefining bond const  of %s from %10.8f to %10.8f"%(currentmol,name,bonds[name].K,k))
+                            if currentmol not in troublemolecs:
+                                troublemolecs.append(currentmol)
+                    else:
+                        bonds[name]=bondparam("%s %s %10.8f %10.8f"%(atom1,atom2,r,k))
+            # Starts reading angles section
+            if flag_angles == 1 and "[" not in line:
+                l = line.split(";")[0]
+                l = l.split("#")[0]
+                if is_not_blank(l):
+                    l=line.strip().split()
+                    theta,k = 0,0
+                    atom1 = newmol.atoms["type"][int(l[0])-1]
+                    atom2 = newmol.atoms["type"][int(l[1])-1]
+                    atom3 = newmol.atoms["type"][int(l[2])-1]
+                    if l[4] in definitions:
+                        theta, k = float(definitions[l[4]].strip().split()[2]),float(definitions[l[4]].strip().split()[3])
+                    else:
+                        theta, k = float(l[4]),float(l[5])
+                    name = "%s-%s-%s"%(atom1,atom2,atom3)
+                    if name in angles:
+                        if angles[name].THETA != theta:
+                            print("Trouble with %s redefining angle of %s from %10.8f to %10.8f"%(currentmol,name,angles[name].THETA,theta))
+                            if currentmol not in troublemolecs:
+                                troublemolecs.append(currentmol)
+                        if angles[name].K != k:
+                            print("Trouble with %s redefining angle const  of %s from %10.8f to %10.8f"%(currentmol,name,angles[name].K,k))
+                            if currentmol not in troublemolecs:
+                                troublemolecs.append(currentmol)
+                    else:
+                        angles[name]=anglparam("%s %s %s %10.8f %10.8f"%(atom1,atom2,atom3,theta,k))
+
+            if "[moleculetype]" in line.replace(" ", ""):
+                if newmol is not None: molecules[newmol.name]=newmol
+                newmol = None
                 flag_atoms, flag_bonds, flag_angles,flag_mol = 0,0,0,1
-            if "[ atoms ]" in line:
+            if "[atoms]" in line.replace(" ", ""):
                  flag_atoms, flag_bonds, flag_angles,flag_mol = 1,0,0,0
-            if "[ bonds ]" in line:
+            if "[bonds]" in line.replace(" ", ""):
                  flag_atoms, flag_bonds, flag_angles,flag_mol = 0,1,0,0
-            if "[ angles ]" in line:
+            if "[angles]" in line.replace(" ", ""):
                  flag_atoms, flag_bonds, flag_angles,flag_mol = 0,0,1,0
+        if newmol is not None: molecules[newmol.name]=newmol
         print("There are %d molecules" % len(molecules))
+        print("There are %d bond types" % len(bonds))
+        print("There are %d angle types" % len(angles))
+    return molecules, bonds,angles
 
-                
+def write_mass(f,atoms):
+    f.write('write_once("Data Masses") {\n')
+    for atm in atoms:
+        f.write("@atom:%s %10.6f\n" % (atoms[atm].name, atoms[atm].M))
+    f.write("}\n\n")
+    return
 
-read_main_itp("Dry-Martini/dry_martini_v2.1.itp")
-read_mol_itp("Dry-Martini/dry_martini_v2.1_cholesterol.itp")
+def write_pair(f, paircoeffs):
+    f.write("\n")
+    f.write('write_once("In Settings") {\n')
+    for p in paircoeffs:
+        pairtype = paircoeffs[p]
+        pairtype.convert_to_real()
+        for pair in pairtype.pairs:
+            f.write("pair_coeff @atom:%s @atom:%s lj/gromacs/coul/gromacs %10.8f %10.8f\n" % (pair[0],pair[1],pairtype.eps,pairtype.sig))
+    f.write("}\n\n")
+    return
+
+
+def write_bond(f,bonds):
+    f.write("\n")
+    f.write('write_once("In Settings") {\n')
+    for b in bonds:
+        bondtype = bonds[b]
+        bondtype.convert_to_real()
+        f.write("bond_coeff @bond:%s harmonic %10.8f %10.8f\n" % (bondtype.name, bondtype.K, bondtype.R))
+    f.write("}\n\n")
+    
+    f.write('write_once("Data Bonds By Type") {\n')
+    for b in bonds:
+        bondtype = bonds[b]
+        f.write("@bond:%s @atom:%s @atom:%s\n"%(bondtype.name,bondtype.a1,bondtype.a2))
+    f.write("}\n\n")
+    return
+
+def write_angl(f,angles):
+    f.write("\n")
+    f.write('write_once("In Settings") {\n')
+    for a in angles:
+        angtype = angles[a]
+        angtype.convert_to_real()
+        f.write("angle_coeff @angle:%s cosine/squared %10.8f %10.8f\n" % (angtype.name, angtype.K, angtype.THETA))
+    f.write("}\n\n")
+
+    f.write('write_once("Data Angles By Type") {\n')
+    for a in angles:
+        angtype = angles[a]
+        f.write("@angle:%s @atom:%s @atom:%s @atom:%s\n"%(angtype.name,angtype.a1,angtype.a2,angtype.a3))
+    f.write("}\n\n")
+    return
+
+def write_sett(f):
+    f.write("\n")
+    f.write('write_once("In Init") {\n')
+    f.write("units real\natom_style full\nbond_style hybrid harmonic\n")
+    f.write("angle_style hybrid cosine/squared\n")
+    f.write("pair_style hybrid lj/gromacs/coul/gromacs 9 12 0.000001 12\n")
+    f.write("special_bonds lj/coul 0.0 1.0 1.0\n")
+    f.write("dielectric 15.0\n")
+    f.write("}\n\n")
+
+
+
+def write_ff(fname,atoms, paircoeffs,bonds,angles):
+    with open (fname+".lt",'w') as f:
+        f.write("%s {\n" % fname)
+        write_mass(f,atoms)
+        write_pair(f, paircoeffs)
+        write_bond(f, bonds)
+        write_angl(f, angles)
+        write_sett(f)
+        f.write("\n}\n")
+    return
+
+def fix_trouble(troublemolecs):
+    if len(troublemolecs) == 0:
+        return
+    for molec in troublemolecs:
+        print("Fixing %s" % molec)
+        mol = molecules[molec] 
+        
+
+fname = str(sys.argv[1])
+if not os.path.exists("ltfiles"):
+    os.makedirs("ltfiles")
+atoms,nbparams,molecules, bonds, angles = {},{},{},{},{}
+troublemolecs = []
+#read_main_itp("Dry-Martini/dry_martini_v2.1.itp")
+#read_mol_itp("Dry-Martini/dry_martini_v2.1_lipids.itp")
+read_mol_itp("test")
+fix_trouble(troublemolecs)
+write_ff(fname,atoms,nbparams,bonds,angles)
+

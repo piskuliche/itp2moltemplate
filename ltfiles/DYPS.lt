@@ -1,0 +1,30 @@
+import "drymartini.lt"
+
+DYPS inherits drymartini {
+write("Data Atoms") {
+$atom:CNO $mol:. @atom:P6  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:PO4 $mol:. @atom:Q5 -1.00000000  0.00000000  0.00000000  0.00000000
+$atom:GL1 $mol:. @atom:SN4a  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:GL2 $mol:. @atom:N4a  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:C1A $mol:. @atom:C1  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:D2A $mol:. @atom:C4h  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:C3A $mol:. @atom:C1  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:C1B $mol:. @atom:C1  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:D2B $mol:. @atom:C4h  0.00000000  0.00000000  0.00000000  0.00000000
+$atom:C3B $mol:. @atom:C1  0.00000000  0.00000000  0.00000000  0.00000000
+}
+
+write("Data Bond List") {
+$bond:b0 $atom:CNO $atom:PO4
+$bond:b1 $atom:PO4 $atom:GL1
+$bond:b2 $atom:GL1 $atom:GL2
+$bond:b3 $atom:GL1 $atom:C1A
+$bond:b4 $atom:C1A $atom:D2A
+$bond:b5 $atom:D2A $atom:C3A
+$bond:b6 $atom:GL2 $atom:C1B
+$bond:b7 $atom:C1B $atom:D2B
+$bond:b8 $atom:D2B $atom:C3B
+}
+
+DYPS.scale(10)
+}
