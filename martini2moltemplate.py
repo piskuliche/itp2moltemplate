@@ -1,7 +1,8 @@
 import numpy as np
 import os
-import sys
+import sys,copy
 
+TROUBLETYPE = -1
 class atom:
     def __init__(self,line):
         line = line.strip().split()
@@ -58,7 +59,7 @@ class molecule:
         line = line.strip().split()
         self.name = str(line[0])
         self.nrexcl = int(line[1])
-        self.atoms={"i":[],"type":[],"resnr":[],"residue":[],"atom":[],"cgnr":[],"Q":[]}
+        self.atoms={"i":[],"type":[],"resnr":[],"residue":[],"atom":[],"cgnr":[],"Q":[],"x":[],"y":[],"z":[]}
         self.bonds=[]
     def add_atom(self,line):
         line = line.strip().split()
@@ -93,6 +94,16 @@ class molecule:
             g.write("}\n\n")
             g.write("%s.scale(10)\n}\n"%self.name)
         return
+    def add_coords(self,grofile):
+        with open(grofile,'r') as g:
+            g.readline()
+            g.readline()
+            for atom in range(len(self.atoms["i"])):
+                line = g.readline().split().strip()
+                self.atoms["x"] = float(line[3])
+                self.atoms["y"] = float(line[4])
+                self.atoms["z"] = float(line[5])
+
 
 
 
@@ -150,7 +161,9 @@ def read_main_itp(filename):
     print("There are %d types of pairwise interactions" % len(nbparams))
     return atoms, nbparams
 
-def read_mol_itp(filename):
+
+
+def read_mol_itp(filename,TROUBLETYPE):
     with open(filename,'r') as f:
         lines = f.readlines()
         flag_atoms, flag_bonds, flag_angles, flag_mol = 0,0,0,0
@@ -190,15 +203,21 @@ def read_mol_itp(filename):
                     else:
                         r,k=float(l[3]),float(l[4])
                     name = "%s-%s"%(atom1,atom2)
+                    print(TROUBLETYPE)
                     if name in bonds:
                         if bonds[name].R != r:
                             print("Trouble with %s redefining bond length of %s from %10.8f to %10.8f"%(currentmol,name,bonds[name].R,r))
                             if currentmol not in troublemolecs:
+                                TROUBLETYPE += 1
                                 troublemolecs.append(currentmol)
                         if bonds[name].K != k:
                             print("Trouble with %s redefining bond const  of %s from %10.8f to %10.8f"%(currentmol,name,bonds[name].K,k))
                             if currentmol not in troublemolecs:
+                                TROUBLETYPE +=1
                                 troublemolecs.append(currentmol)
+                        if currentmol in troublemolecs:
+                            name = "%s-%s"%(atom1+"f"+str(TROUBLETYPE),atom2+"f"+str(TROUBLETYPE))
+                            bonds[name]=bondparam("%s %s %10.8f %10.8f"%(atom1+"f"+str(TROUBLETYPE),atom2+"f"+str(TROUBLETYPE),r,k))
                     else:
                         bonds[name]=bondparam("%s %s %10.8f %10.8f"%(atom1,atom2,r,k))
             # Starts reading angles section
@@ -220,11 +239,16 @@ def read_mol_itp(filename):
                         if angles[name].THETA != theta:
                             print("Trouble with %s redefining angle of %s from %10.8f to %10.8f"%(currentmol,name,angles[name].THETA,theta))
                             if currentmol not in troublemolecs:
+                                TROUBLETYPE += 1
                                 troublemolecs.append(currentmol)
                         if angles[name].K != k:
                             print("Trouble with %s redefining angle const  of %s from %10.8f to %10.8f"%(currentmol,name,angles[name].K,k))
                             if currentmol not in troublemolecs:
+                                TROUBLETYPE += 1
                                 troublemolecs.append(currentmol)
+                        if currentmol in troublemolecs:
+                            name = "%s-%s-%s"%(atom1+"f"+str(TROUBLETYPE),atom2+"f"+str(TROUBLETYPE),atom3+"f"+str(TROUBLETYPE))
+                            angles[name]=anglparam("%s %s %s %10.8f %10.8f"%(atom1+"f"+str(TROUBLETYPE),atom2+"f"+str(TROUBLETYPE),atom3+"f"+str(TROUBLETYPE),theta,k))
                     else:
                         angles[name]=anglparam("%s %s %s %10.8f %10.8f"%(atom1,atom2,atom3,theta,k))
 
@@ -233,16 +257,18 @@ def read_mol_itp(filename):
                 newmol = None
                 flag_atoms, flag_bonds, flag_angles,flag_mol = 0,0,0,1
             if "[atoms]" in line.replace(" ", ""):
-                 flag_atoms, flag_bonds, flag_angles,flag_mol = 1,0,0,0
+                flag_atoms, flag_bonds, flag_angles,flag_mol = 1,0,0,0
             if "[bonds]" in line.replace(" ", ""):
-                 flag_atoms, flag_bonds, flag_angles,flag_mol = 0,1,0,0
+                flag_atoms, flag_bonds, flag_angles,flag_mol = 0,1,0,0
             if "[angles]" in line.replace(" ", ""):
-                 flag_atoms, flag_bonds, flag_angles,flag_mol = 0,0,1,0
+                flag_atoms, flag_bonds, flag_angles,flag_mol = 0,0,1,0
+            if "[constraints]" in line.replace(" ","") or "[dihedrals]" in line.replace(" ",""):
+                flag_atoms, flag_bonds, flag_angles, flag_mol = 0,0,0,0
         if newmol is not None: molecules[newmol.name]=newmol
         print("There are %d molecules" % len(molecules))
         print("There are %d bond types" % len(bonds))
         print("There are %d angle types" % len(angles))
-    return molecules, bonds,angles
+    return TROUBLETYPE
 
 def write_mass(f,atoms):
     f.write('write_once("Data Masses") {\n')
@@ -259,6 +285,17 @@ def write_pair(f, paircoeffs):
         pairtype.convert_to_real()
         for pair in pairtype.pairs:
             f.write("pair_coeff @atom:%s @atom:%s lj/gromacs/coul/gromacs %10.8f %10.8f\n" % (pair[0],pair[1],pairtype.eps,pairtype.sig))
+            if pair[0] in convertname:
+                for elem in convertname[pair[0]]:
+                    f.write("pair_coeff @atom:%s @atom:%s lj/gromacs/coul/gromacs %10.8f %10.8f\n" % (elem,pair[1],pairtype.eps,pairtype.sig))
+            if pair[1] in convertname:
+                for elem in convertname[pair[1]]:
+                    f.write("pair_coeff @atom:%s @atom:%s lj/gromacs/coul/gromacs %10.8f %10.8f\n" % (pair[0],elem,pairtype.eps,pairtype.sig))
+            if pair[0] in convertname and pair[1] in convertname:
+                for elem1 in convertname[pair[0]]:
+                    for elem2 in convertname[pair[1]]:
+                        f.write("pair_coeff @atom:%s @atom:%s lj/gromacs/coul/gromacs %10.8f %10.8f\n" % (elem1,elem2,pairtype.eps,pairtype.sig))
+
     f.write("}\n\n")
     return
 
@@ -319,21 +356,47 @@ def write_ff(fname,atoms, paircoeffs,bonds,angles):
     return
 
 def fix_trouble(troublemolecs):
+    # Fixes molecule class details
+    # Adds new atom types
     if len(troublemolecs) == 0:
         return
+    c = 0
     for molec in troublemolecs:
+        print(c)
         print("Fixing %s" % molec)
-        mol = molecules[molec] 
+        mol = molecules[molec]
+        newmol = copy.deepcopy(mol)
+        # Fix molecule itself
+        for i in range(len(mol.atoms["type"])):
+            newmol.atoms["type"][i] = mol.atoms["type"][i]+"f"+str(c)
+            atoms[mol.atoms["type"][i]+"f"+str(c)]=copy.deepcopy(atoms[mol.atoms["type"][i]]) # copies to new entry
+            atoms[mol.atoms["type"][i]+"f"+str(c)].name=mol.atoms["type"][i]+"f"+str(c)
+            if mol.atoms["type"][i] not in convertname:
+                convertname[mol.atoms["type"][i]]=[]
+                convertname[mol.atoms["type"][i]].append(mol.atoms["type"][i]+"f"+str(c))
+            else:
+                if mol.atoms["type"][i]+"f"+str(c) not in  convertname[mol.atoms["type"][i]]:
+                    convertname[mol.atoms["type"][i]].append(mol.atoms["type"][i]+"f"+str(c))
+        for b in range(len(mol.bonds)):
+            newmol.bonds[b][0] = mol.bonds[b][0]+"f"+str(c)
+            newmol.bonds[b][1] = mol.bonds[b][1]+"f"+str(c)
+        c=c+1
+        molecules[molec] = newmol
         
 
 fname = str(sys.argv[1])
+mol2write=str(sys.argv[2])
+grofile = str(sys.argv[3])
 if not os.path.exists("ltfiles"):
     os.makedirs("ltfiles")
 atoms,nbparams,molecules, bonds, angles = {},{},{},{},{}
-troublemolecs = []
-#read_main_itp("Dry-Martini/dry_martini_v2.1.itp")
-#read_mol_itp("Dry-Martini/dry_martini_v2.1_lipids.itp")
-read_mol_itp("test")
+troublemolecs,convertname=[],{}
+read_main_itp("Dry-Martini/dry_martini_v2.1.itp")
+TROUBLETYPE=read_mol_itp("Dry-Martini/dry_martini_v2.1_lipids.itp",TROUBLETYPE)
+TROUBLETYPE=read_mol_itp("Dry-Martini/dry_martini_v2.1_solvents.itp",TROUBLETYPE)
+TROUBLETYPE=read_mol_itp("Dry-Martini/dry_martini_v2.1_cholesterol.itp",TROUBLETYPE)
+TROUBLETYPE=read_mol_itp("Dry-Martini/dry_martini_v2.1_ions.itp",TROUBLETYPE)
 fix_trouble(troublemolecs)
 write_ff(fname,atoms,nbparams,bonds,angles)
+molecules[mol2write].write(fname)
 

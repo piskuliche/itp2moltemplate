@@ -1,6 +1,6 @@
-import "drymartini.lt"
+import "drytest.lt"
 
-DPPC inherits drymartini {
+DPPC inherits drytest {
 write("Data Atoms") {
 $atom:NC3 $mol:. @atom:Q0  1.00000000  0.00000000  0.00000000  0.00000000
 $atom:PO4 $mol:. @atom:Qa -1.00000000  0.00000000  0.00000000  0.00000000
