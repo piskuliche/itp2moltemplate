@@ -71,6 +71,7 @@ class molecule:
             if key in intkey: self.atoms[key].append(int(line[c]))
             if key in fltkey: self.atoms[key].append(float(line[c]))
             if key in strkey: self.atoms[key].append(str(line[c]))
+            if key in ["x","y","z"]: self.atoms[key].append(0)
             c = c+1
     def add_bond(self,line):
         line = line.strip().split()
@@ -84,7 +85,7 @@ class molecule:
             g.write('%s inherits %s {\n' % (self.name,ffname))
             g.write('write("Data Atoms") {\n')
             for i in range(len(self.atoms["i"])):
-                g.write("$atom:%s $mol:. @atom:%s % 10.8f % 10.8f % 10.8f % 10.8f\n" % (self.atoms["atom"][i],self.atoms["type"][i],self.atoms["Q"][i],0,0,0))
+                g.write("$atom:%s $mol:. @atom:%s % 10.8f % 10.8f % 10.8f % 10.8f\n" % (self.atoms["atom"][i],self.atoms["type"][i],self.atoms["Q"][i],self.atoms["x"][i],self.atoms["y"][i],self.atoms["z"][i]))
             g.write("}\n\n")
             g.write('write("Data Bond List") {\n')
             c=0
@@ -92,17 +93,19 @@ class molecule:
                 g.write("$bond:b%d $atom:%s $atom:%s\n" % (c,bond[0],bond[1]))
                 c=c+1
             g.write("}\n\n")
-            g.write("%s.scale(10)\n}\n"%self.name)
+            #g.write("%s.scale(10)\n}\n"%self.name)
+            g.write("\n}\n"%self.name)
         return
     def add_coords(self,grofile):
         with open(grofile,'r') as g:
             g.readline()
             g.readline()
             for atom in range(len(self.atoms["i"])):
-                line = g.readline().split().strip()
-                self.atoms["x"] = float(line[3])
-                self.atoms["y"] = float(line[4])
-                self.atoms["z"] = float(line[5])
+                line = g.readline().strip().split()
+                self.atoms["x"][atom] = float(line[3])*10
+                self.atoms["y"][atom] = float(line[4])*10
+                self.atoms["z"][atom] = float(line[5])*10
+            print("Wrote coords, assumed nanometer and converted to A")
 
 
 
@@ -139,6 +142,7 @@ def read_main_itp(filename):
                     l = l.strip().split()
                     if l[3] in nbparams:
                         nbparams[l[3]].add_interaction(str(l[0]),str(l[1]),int(l[2]))
+                        if str(l[0]) == "Q0" and str(l[1]) == "Q0": print("test",l[3])
                     else:
                         sig, eps = float(l[3]), float(l[4])
                         found=0
@@ -164,6 +168,7 @@ def read_main_itp(filename):
 
 
 def read_mol_itp(filename,TROUBLETYPE):
+    print("Beginning read of %s" % filename)
     with open(filename,'r') as f:
         lines = f.readlines()
         flag_atoms, flag_bonds, flag_angles, flag_mol = 0,0,0,0
@@ -198,12 +203,12 @@ def read_mol_itp(filename,TROUBLETYPE):
                     l=line.strip().split()
                     r,k=0,0
                     atom1, atom2 = newmol.atoms["type"][int(l[0])-1],newmol.atoms["type"][int(l[1])-1]
+                    print(l)
                     if l[3] in definitions:
                         r,k=float(definitions[l[3]].strip().split()[2]),float(definitions[l[3]].strip().split()[3])
                     else:
                         r,k=float(l[3]),float(l[4])
                     name = "%s-%s"%(atom1,atom2)
-                    print(TROUBLETYPE)
                     if name in bonds:
                         if bonds[name].R != r:
                             print("Trouble with %s redefining bond length of %s from %10.8f to %10.8f"%(currentmol,name,bonds[name].R,r))
@@ -362,8 +367,7 @@ def fix_trouble(troublemolecs):
         return
     c = 0
     for molec in troublemolecs:
-        print(c)
-        print("Fixing %s" % molec)
+        print("Fixing molecule %s" % molec)
         mol = molecules[molec]
         newmol = copy.deepcopy(mol)
         # Fix molecule itself
@@ -383,20 +387,29 @@ def fix_trouble(troublemolecs):
         c=c+1
         molecules[molec] = newmol
         
+if len(sys.argv) < 2:
+    print("Usage martini2moltemplate.py ffname [molecule to write] [molecule gro file]")
+    exit()
 
 fname = str(sys.argv[1])
-mol2write=str(sys.argv[2])
-grofile = str(sys.argv[3])
+mol2write, grofile = None,None
+if len(sys.argv) == 4:
+    mol2write=str(sys.argv[2])
+    grofile = str(sys.argv[3])
 if not os.path.exists("ltfiles"):
     os.makedirs("ltfiles")
 atoms,nbparams,molecules, bonds, angles = {},{},{},{},{}
 troublemolecs,convertname=[],{}
+#read_main_itp("Dry-Martini/dry_martini_v2.1.itp")
 read_main_itp("Dry-Martini/dry_martini_v2.1.itp")
 TROUBLETYPE=read_mol_itp("Dry-Martini/dry_martini_v2.1_lipids.itp",TROUBLETYPE)
 TROUBLETYPE=read_mol_itp("Dry-Martini/dry_martini_v2.1_solvents.itp",TROUBLETYPE)
 TROUBLETYPE=read_mol_itp("Dry-Martini/dry_martini_v2.1_cholesterol.itp",TROUBLETYPE)
 TROUBLETYPE=read_mol_itp("Dry-Martini/dry_martini_v2.1_ions.itp",TROUBLETYPE)
+TROUBLETYPE=read_mol_itp("Dry-Martini/addmol.itp",TROUBLETYPE)
 fix_trouble(troublemolecs)
 write_ff(fname,atoms,nbparams,bonds,angles)
-molecules[mol2write].write(fname)
+if len(sys.argv) == 4:
+    molecules[mol2write].add_coords(grofile)
+    molecules[mol2write].write(fname)
 
